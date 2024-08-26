@@ -1,7 +1,7 @@
 import Flutter
 import UIKit
 
-public class SwiftzebrautilPlugin: NSObject, FlutterPlugin {
+public class SwiftZebraUtilPlugin: NSObject, FlutterPlugin {
     
     var printers = [Printer]()
     var binaryMessenger: FlutterBinaryMessenger?
@@ -9,7 +9,7 @@ public class SwiftzebrautilPlugin: NSObject, FlutterPlugin {
   public static func register(with registrar: FlutterPluginRegistrar) {
     let channel = FlutterMethodChannel(name: "zebrautil", binaryMessenger: registrar.messenger())
 
-    let instance = SwiftzebrautilPlugin()
+    let instance = SwiftZebraUtilPlugin()
     instance.binaryMessenger = registrar.messenger()
     registrar.addMethodCallDelegate(instance, channel: channel)
     

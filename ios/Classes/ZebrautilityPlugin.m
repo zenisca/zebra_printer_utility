@@ -1,4 +1,4 @@
-#import "zebrautilPlugin.h"
+#import "ZebraUtilPlugin.h"
 #import "TcpPrinterConnection.h"
 #if __has_include(<zebrautil/zebrautil-Swift.h>)
 #import <zebrautil/zebrautil-Swift.h>
@@ -9,9 +9,9 @@
 #import "zebrautil-Swift.h"
 #endif
 
-@implementation zebrautilPlugin
+@implementation ZebraUtilPlugin
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar>*)registrar {
 //    TcpPrinterConnection *con =  [TcpPrinterConnection init];
-  [SwiftzebrautilPlugin registerWithRegistrar:registrar];
+  [SwiftZebraUtilPlugin registerWithRegistrar:registrar];
 }
 @end

@@ -6,10 +6,10 @@ enum Command { calibrate, mediaType, darkness }
 class ZebraPrinter {
   late MethodChannel channel;
 
-  Function? onPrinterFound;
-  Function? onPrinterDiscoveryDone;
-  Function? onDiscoveryError;
-  Function? onChangePrinterStatus;
+  Function onPrinterFound;
+  Function onPrinterDiscoveryDone;
+  Function onDiscoveryError;
+  Function onChangePrinterStatus;
   Function? onPermissionDenied;
 
   bool isRotated = false;
@@ -23,9 +23,9 @@ class ZebraPrinter {
 
   discoveryPrinters() {
     channel.invokeMethod("checkPermission").then((isGrantPermission) {
-      if (isGrantPermission)
+      if (isGrantPermission){
         channel.invokeMethod("discoverPrinters");
-      else {
+      }else {
         if (onPermissionDenied != null) onPermissionDenied!();
       }
     });
@@ -67,7 +67,7 @@ class ZebraPrinter {
     try {
       channel.invokeMethod("setSettings", {"SettingCommand": command});
     } on PlatformException catch (e) {
-      onDiscoveryError!(e.code, e.message);
+      onDiscoveryError(e.code, e.message);
     }
   }
 
@@ -114,17 +114,17 @@ class ZebraPrinter {
 
   Future<dynamic> nativeMethodCallHandler(MethodCall methodCall) async {
     if (methodCall.method == "printerFound") {
-      onPrinterFound!(
+      onPrinterFound(
           methodCall.arguments["Name"],
           methodCall.arguments["Address"],
           methodCall.arguments["IsWifi"].toString() == "true" ? true : false);
     } else if (methodCall.method == "changePrinterStatus") {
-      onChangePrinterStatus!(
+      onChangePrinterStatus(
           methodCall.arguments["Status"], methodCall.arguments["Color"]);
     } else if (methodCall.method == "onPrinterDiscoveryDone") {
-      onPrinterDiscoveryDone!();
+      onPrinterDiscoveryDone();
     } else if (methodCall.method == "onDiscoveryError") {
-      onDiscoveryError!(methodCall.arguments["ErrorCode"]
+      onDiscoveryError(methodCall.arguments["ErrorCode"]
           , methodCall.arguments["ErrorText"]);
     }
     return null;
