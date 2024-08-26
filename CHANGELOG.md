@@ -7,3 +7,7 @@ Improve performance for request local network
 
 ## 0.0.34
 Request access for local network in ios
+
+
+## 0.0.40
+Upgrade dependencies 

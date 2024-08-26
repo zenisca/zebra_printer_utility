@@ -3,7 +3,7 @@
 // (powered by Fernflower decompiler)
 //
 
-package com.professor.zebrautility;
+package com.rubdev.zebrautil;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothClass;

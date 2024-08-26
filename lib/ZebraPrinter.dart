@@ -66,7 +66,9 @@ class ZebraPrinter {
 
     try {
       channel.invokeMethod("setSettings", {"SettingCommand": command});
-    } on PlatformException catch (e) {}
+    } on PlatformException catch (e) {
+      onDiscoveryError!(e.code, e.message);
+    }
   }
 
   setDarkness(int darkness) {

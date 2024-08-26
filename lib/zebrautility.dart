@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'package:flutter/services.dart';
-import 'package:zebrautility/ZebraPrinter.dart';
+import 'package:zebrautil/ZebraPrinter.dart';
 
-class Zebrautility {
-  static const MethodChannel _channel = const MethodChannel('zebrautility');
+class Zebrautil {
+  static const MethodChannel _channel = const MethodChannel('zebrautil');
 
   static Future<ZebraPrinter> getPrinterInstance(
       {Function(String name, String ipAddress, bool isWifi)? onPrinterFound,

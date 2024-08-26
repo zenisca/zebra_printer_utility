@@ -1,4 +1,4 @@
-package com.professor.zebrautility;
+package com.rubdev.zebrautil;
 
 import android.Manifest;
 import android.app.Activity;
@@ -508,7 +508,7 @@ public class Printer implements MethodChannel.MethodCallHandler {
                 System.out.println("Printer set status: " + message);
                 HashMap<String, Object> arguments = new HashMap<>();
                 arguments.put("Status", message);
-                arguments.put("Color", color + "");
+                arguments.put("Color", color);
                 methodChannel.invokeMethod("changePrinterStatus", arguments);
             }
         });
@@ -607,7 +607,7 @@ public class Printer implements MethodChannel.MethodCallHandler {
         } else if (call.method.equals("checkPermission")) {
             checkPermission(context, result);
         } else if (call.method.equals("convertBase64ImageToZPLString")) {
-            convertBase64ImageToZPLString(call.argument("Data").toString())
+            convertBase64ImageToZPLString(call.argument("Data").toString()
                     , Integer.valueOf(call.argument("rotation").toString()), result);
         } else if (call.method.equals("disconnect")) {
             new Thread(new Runnable() {

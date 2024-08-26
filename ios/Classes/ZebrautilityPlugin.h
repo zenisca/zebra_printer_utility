@@ -1,4 +1,4 @@
 #import <Flutter/Flutter.h>
 
-@interface ZebrautilityPlugin : NSObject<FlutterPlugin>
+@interface zebrautilPlugin : NSObject<FlutterPlugin>
 @end

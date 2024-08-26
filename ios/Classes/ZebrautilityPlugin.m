@@ -1,17 +1,17 @@
-#import "ZebrautilityPlugin.h"
+#import "zebrautilPlugin.h"
 #import "TcpPrinterConnection.h"
-#if __has_include(<zebrautility/zebrautility-Swift.h>)
-#import <zebrautility/zebrautility-Swift.h>
+#if __has_include(<zebrautil/zebrautil-Swift.h>)
+#import <zebrautil/zebrautil-Swift.h>
 #else
 // Support project import fallback if the generated compatibility header
 // is not copied when this plugin is created as a library.
 // https://forums.swift.org/t/swift-static-libraries-dont-copy-generated-objective-c-header/19816
-#import "zebrautility-Swift.h"
+#import "zebrautil-Swift.h"
 #endif
 
-@implementation ZebrautilityPlugin
+@implementation zebrautilPlugin
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar>*)registrar {
 //    TcpPrinterConnection *con =  [TcpPrinterConnection init];
-  [SwiftZebrautilityPlugin registerWithRegistrar:registrar];
+  [SwiftzebrautilPlugin registerWithRegistrar:registrar];
 }
 @end

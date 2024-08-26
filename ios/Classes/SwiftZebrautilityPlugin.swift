@@ -1,15 +1,15 @@
 import Flutter
 import UIKit
 
-public class SwiftZebrautilityPlugin: NSObject, FlutterPlugin {
+public class SwiftzebrautilPlugin: NSObject, FlutterPlugin {
     
     var printers = [Printer]()
     var binaryMessenger: FlutterBinaryMessenger?
     
   public static func register(with registrar: FlutterPluginRegistrar) {
-    let channel = FlutterMethodChannel(name: "zebrautility", binaryMessenger: registrar.messenger())
+    let channel = FlutterMethodChannel(name: "zebrautil", binaryMessenger: registrar.messenger())
 
-    let instance = SwiftZebrautilityPlugin()
+    let instance = SwiftzebrautilPlugin()
     instance.binaryMessenger = registrar.messenger()
     registrar.addMethodCallDelegate(instance, channel: channel)
     

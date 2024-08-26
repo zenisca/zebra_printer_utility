@@ -1,4 +1,4 @@
-# Flutter ZebraUtility
+# Flutter zebrautil
 
 
 
@@ -34,7 +34,7 @@ Add `Privacy - Local Network Usage Description` in your `info.plist`.
 ## Getting Started
 for initial new object of printer use this.
 ```sh
-     ZebraPrinter zebraPrinter = await Zebrautility.getPrinterInstance(
+     ZebraPrinter zebraPrinter = await zebrautil.getPrinterInstance(
   onPrinterFound, onPrinterDiscoveryDone, onChangePrinterStatus,
   onPermissionDenied: onPermissionDenied);
 ```

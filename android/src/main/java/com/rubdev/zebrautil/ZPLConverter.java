@@ -1,4 +1,4 @@
-package com.professor.zebrautility;
+package com.rubdev.zebrautil;
 
 import android.graphics.Bitmap;
 
