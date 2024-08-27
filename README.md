@@ -130,3 +130,14 @@ For disconnect from printer, use `disconnect` method. For battery saver, disconn
 ```sh
   zebraPrinter.disconnect();
 ```
+
+# Acknowledgements
+I would like to express my gratitude to Deltec for fostering a friendly and supportive environment.
+
+Special thanks to [`MythiCode`](https://github.com/MythiCode/zebra_utlity) for providing the foundational code for this library. Specifically, I appreciate the following contributions:
+
+* Base implementation for core functionalities
+* Initial setup and structure
+* Key algorithms and methods
+
+Thank you to everyone who made this project possible!
