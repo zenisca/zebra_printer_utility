@@ -1,6 +1,5 @@
 package com.rubdev.zebrautil;
 
-import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
@@ -32,6 +31,7 @@ import com.zebra.sdk.printer.discovery.NetworkDiscoverer;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Objects;
 
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding;
 import io.flutter.plugin.common.BinaryMessenger;
@@ -163,11 +163,7 @@ public class Printer implements MethodChannel.MethodCallHandler {
                                     }
                                 }
                         }
-                        try {
-                            result.success(false);
-                        } catch (Exception e) {
-
-                        }
+                        result.success(false);
                         return false;
                     }
                 });
@@ -256,11 +252,10 @@ public class Printer implements MethodChannel.MethodCallHandler {
     public void print(final String data) {
         new Thread(new Runnable() {
             public void run() {
-//                enableTestButton(false);
                 Looper.prepare();
                 doConnectionTest(data);
                 Looper.loop();
-                Looper.myLooper().quit();
+                Objects.requireNonNull(Looper.myLooper()).quit();
             }
         }).start();
     }
@@ -293,7 +288,7 @@ public class Printer implements MethodChannel.MethodCallHandler {
             setStatus(context.getResources().getString(R.string.disconnect), context.getString(R.string.disconnectColor));
         }
 
-        byte sendCut[] = {0x0a, 0x0a, 0x1d, 0x56, 0x01};
+        byte[] sendCut = {0x0a, 0x0a, 0x1d, 0x56, 0x01};
         socketmanager.threadconnectwrite(sendCut);
         try {
             Thread.sleep(100);
@@ -319,12 +314,11 @@ public class Printer implements MethodChannel.MethodCallHandler {
             setStatus(context.getResources().getString(R.string.done), context.getString(R.string.connectedColor));
         } catch (ConnectionException e) {
             disconnect();
-        } finally {
         }
     }
 
 
-    public boolean connectToSelectPrinter(String address) {
+    public void connectToSelectPrinter(String address) {
         isZebraPrinter = true;
         setStatus(context.getString(R.string.connecting), context.getString(R.string.connectingColor));
         selectedAddress = null;
@@ -338,8 +332,6 @@ public class Printer implements MethodChannel.MethodCallHandler {
             isBluetoothPrinter = false;
         }
         printer = connect(isBluetoothPrinter);
-        if (printer != null) return true;
-        return false;
     }
 
     public String isPrinterConnect() {
@@ -350,19 +342,6 @@ public class Printer implements MethodChannel.MethodCallHandler {
                     public void run() {
                         try {
                             printerConnection.write("Test".getBytes());
-                            //This comment is a bad practice.
-//                        if (printerConnection instanceof TcpConnection) {
-//                            TcpConnection printerConnectionTemp = new TcpConnection(getTcpAddress(), getTcpPortNumber());
-//                            try {
-//                                printerConnectionTemp.open();
-//                            } catch (ConnectionException e) {
-//                                disconnect();
-//                                tempIsPrinterConnect = false;
-//
-//                            } finally {
-//                                printerConnectionTemp.close();
-//                            }
-//                        }
                         } catch (ConnectionException e) {
                             e.printStackTrace();
                             disconnect();
@@ -453,12 +432,7 @@ public class Printer implements MethodChannel.MethodCallHandler {
         if (printerConnection.isConnected()) {
             try {
                 printer = ZebraPrinterFactory.getInstance(printerConnection);
-            } catch (ConnectionException e) {
-                printer = null;
-                DemoSleeper.sleep(1000);
-                disconnect();
-            } catch (ZebraPrinterLanguageUnknownException e) {
-                printer = null;
+            } catch (ConnectionException | ZebraPrinterLanguageUnknownException e) {
                 DemoSleeper.sleep(1000);
                 disconnect();
             }
@@ -487,11 +461,9 @@ public class Printer implements MethodChannel.MethodCallHandler {
                 if (printerConnection != null) {
                     printerConnection.close();
                 }
-
             } catch (ConnectionException e) {
                 e.printStackTrace();
             } finally {
-//            enableTestButton(true);
                 setStatus(context.getString(R.string.disconnect), context.getString(R.string.disconnectColor));
             }
         } else {
@@ -573,19 +545,15 @@ public class Printer implements MethodChannel.MethodCallHandler {
         if (mediaType.equals("Label")) {
             settings = "! U1 setvar \"media.type\" \"label\"\n" +
                     "             ! U1 setvar \"media.sense_mode\" \"gap\"\n" +
-                    //    "             ! U1 setvar \"print.tone\" \"0\"\n" +
                     "              ~jc^xa^jus^xz";
         } else if (mediaType.equals("BlackMark")) {
             settings = "! U1 setvar \"media.type\" \"label\"\n" +
                     "             ! U1 setvar \"media.sense_mode\" \"bar\"\n" +
-                    //    "             ! U1 setvar \"print.tone\" \"0\"\n" +
                     "              ~jc^xa^jus^xz";
         } else {
-            settings = //"! U1 SPEED 4\n" +
+            settings =
                     "      ! U1 setvar \"print.tone\" \"0\"\n" +
                             "      ! U1 setvar \"media.type\" \"journal\"\n";
-            //   "      ! U1 setvar \"media.sense_mode\" \"bar\"" +
-            // " ~jc^xa^jus^xz";
         }
         setSettings(settings);
     }
@@ -614,11 +582,10 @@ public class Printer implements MethodChannel.MethodCallHandler {
                 @Override
                 public void run() {
                     disconnect();
-
                 }
             }).start();
         } else if (call.method.equals("isPrinterConnected")) {
-            isPrinterConnect();
+            result.success(isPrinterConnect());
         } else if (call.method.equals("discoverPrinters")) {
             if (checkIsLocationNetworkProviderIsOn()) {
                 discoveryPrinters(context, methodChannel);
@@ -639,13 +606,11 @@ public class Printer implements MethodChannel.MethodCallHandler {
             new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    final boolean r = false;
                     connectToSelectPrinter(call.argument("Address").toString());
                     ((Activity) context).runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            if (r) result.success(true);
-                            else result.success(false);
+                            result.success(true);
                         }
                     });
                 }

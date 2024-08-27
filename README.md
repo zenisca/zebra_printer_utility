@@ -27,52 +27,85 @@ android {
     }
 }
 ```
+
+Include the necessary permission in the Android Manifest.
+```sh
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+```
+
 ## iOS
 Add `Supported external accessory protocols` in your `info.plist` and then add `com.zebra.rawport`to its.
 Add `Privacy - Local Network Usage Description` in your `info.plist`.
+
 # Example
 ## Getting Started
-for initial new object of printer use this.
+There is a static class that allows you to create different instances of ZebraPrinter.
 ```sh
-     ZebraPrinter zebraPrinter = await ZebraUtil.getPrinterInstance(
-  onPrinterFound, onPrinterDiscoveryDone, onChangePrinterStatus,
-  onPermissionDenied: onPermissionDenied);
+     FutureBuilder(
+        future: ZebraUtil.getPrinterInstance(), //required async 
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          }
+          final zebraPrinter = snapshot.data as ZebraPrinter;
+          return PrinterTemplate(zebraPrinter);
+        },
+      ),
 ```
 
-You must pass 3 functions `onPrinterFound`, `onPrinterDiscoveryDone` and `onChangePrinterStatus`.
-`onPrinterFound` is called, when a new printer found. you can implement like this:
+You can then pass callbacks for either `onDiscoveryError`, `onPermissionDenied`, or neither.
+
 ```sh
-  Function onPrinterFound = (name, ipAddress) {
-      print("PrinterFound :" + name + ipAddress);
+     zebraPrinter.onDiscoveryError =  ( errorCode, errorText) {
+      print("Error: $errorCode, $errorText");
     };
+    zebraPrinter.onPermissionDenied = () {
+      print("Permission denied");
+    }
 ```
-`onPrinterDiscoveryDone` is called, when discovery printers is done and finished. You can implement like this:
-```sh
- Function onPrinterDiscoveryDone = () {
-      print("Discovery Done");
-    };
-```
-`onChangePrinterStatus` when the Status of printer changes, You can implement like this:
-```sh
-   Function onChangePrinterStatus = (status, color) {
-      print("change printer status: " + status + color);
-    };
-```
-`onPermissionDenied` is called, when android user deny location permission. You can implement like this:
-```sh
-  Function onPermissionDenied = () {
-      print("Permission Deny.");
-    };
-```
+
 ## Methods
-For start Discovery bluetooth and wifi printres, use this method:
+After configuring the instance, use the following method to start searching for available devices:
+
 ```sh
   zebraPrinter.discoveryPrinters();
 ```
+To listen for and display any devices (`ZebraDevice`), you can use the Zebra printer `notifier`
+```sh
+  ListenableBuilder(
+      listenable: zebraPrinter.notifier,
+      builder: (context, child) {
+        final printers = notifier.printers;
+        if (printers.isEmpty) {
+          return const Center(
+            child: Text("Printers not found"),
+          );
+        }
+        return ListView.builder(
+            itemBuilder: (BuildContext context, int index) {
+              return ListTile(
+                  title: Text(printers[index].name),
+                  subtitle: Text(printers[index].status,
+                      style: TextStyle(color: printers[index].color)),
+                  leading: Icon(Icons.print, color: printers[index].color),
+                  onTap: () {
+                    zebraPrinter.connectToPrinter(printers[index].address);
+                  });
+            },
+            itemCount: printers.length);
+      },
+    )
+```
+
 For connecting to printer, pass ipAddreess for wifi printer or macAddress for bluetooth printer to `connectToPrinter` method.
 ```sh
  zebraPrinter.connectToPrinter("192.168.47.50");
 ```
+
 You can set media type between `Lable`, `Journal` and `BlackMark`. You can choose media type by `EnumMediaType`.
 ```sh
   zebraPrinter.setMediaType(EnumMediaType.BlackMark);

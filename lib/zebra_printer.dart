@@ -1,37 +1,44 @@
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:zebrautil/zebra_device.dart';
 
 enum EnumMediaType { Label, BlackMark, Journal }
+
 enum Command { calibrate, mediaType, darkness }
+
+enum StatusZebra { Connected, Disconnected, Disconnecting, Connecting }
 
 class ZebraPrinter {
   late MethodChannel channel;
 
-  Function onPrinterFound;
-  Function onPrinterDiscoveryDone;
-  Function onDiscoveryError;
-  Function onChangePrinterStatus;
+  Function(String, String?)? onDiscoveryError;
   Function? onPermissionDenied;
-
   bool isRotated = false;
+  late ZebraPrinterNotifier notifier;
+  int? selectedIndex;
 
-  ZebraPrinter(String id, this.onPrinterFound, this.onPrinterDiscoveryDone,
-      this.onDiscoveryError, this.onChangePrinterStatus,
-      {this.onPermissionDenied}) {
+  ZebraPrinter(String id,
+      {this.onDiscoveryError,
+      this.onPermissionDenied,
+      ZebraPrinterNotifier? notifier}) {
     channel = MethodChannel('ZebraPrinterObject' + id);
     channel.setMethodCallHandler(nativeMethodCallHandler);
+    this.notifier = notifier ?? ZebraPrinterNotifier();
   }
 
-  discoveryPrinters() {
+  void discoveryPrinters() {
+    notifier.isDone = false;
     channel.invokeMethod("checkPermission").then((isGrantPermission) {
-      if (isGrantPermission){
+      if (isGrantPermission) {
         channel.invokeMethod("discoverPrinters");
-      }else {
+      } else {
+        notifier.isDone = true;
         if (onPermissionDenied != null) onPermissionDenied!();
       }
     });
   }
 
-  _setSettings(Command setting, dynamic values) {
+  void _setSettings(Command setting, dynamic values) {
     String command = "";
     switch (setting) {
       case Command.mediaType:
@@ -67,27 +74,40 @@ class ZebraPrinter {
     try {
       channel.invokeMethod("setSettings", {"SettingCommand": command});
     } on PlatformException catch (e) {
-      onDiscoveryError(e.code, e.message);
+      if (onDiscoveryError != null) onDiscoveryError!(e.code, e.message);
     }
   }
 
-  setDarkness(int darkness) {
+  void setOnDiscoveryError(Function(String, String?)? onDiscoveryError) {
+    this.onDiscoveryError = onDiscoveryError;
+  }
+
+  void setOnPermissionDenied(Function(String, String) onPermissionDenied) {
+    this.onPermissionDenied = onPermissionDenied;
+  }
+
+  void setDarkness(int darkness) {
     _setSettings(Command.darkness, darkness.toString());
   }
 
-  setMediaType(EnumMediaType mediaType) {
+  void setMediaType(EnumMediaType mediaType) {
     _setSettings(Command.mediaType, mediaType);
   }
 
-  connectToPrinter(String address) {
+  void connectToPrinter(String address) {
+    selectedIndex =
+        notifier.printers.indexWhere((element) => element.address == address);
     channel.invokeMethod("connectToPrinter", {"Address": address});
   }
 
-  connectToGenericPrinter(String address) {
-    channel.invokeMethod("connectToGenericPrinter", {"Address": address});
+  void connectToGenericPrinter(String address) {
+    selectedIndex =
+        notifier.printers.indexWhere((element) => element.address == address);
+    channel
+        .invokeMethod("connectToGenericPrinter", {"Address": address});
   }
 
-  print(String data) {
+  void print(String data) {
     if (!data.contains("^PON")) data = data.replaceAll("^XA", "^XA^PON");
 
     if (isRotated) {
@@ -96,39 +116,80 @@ class ZebraPrinter {
     channel.invokeMethod("print", {"Data": data});
   }
 
-  disconnect() {
+  void disconnect() {
     channel.invokeMethod("disconnect", null);
   }
 
-  calibratePrinter() {
+  void calibratePrinter() {
     _setSettings(Command.calibrate, null);
   }
 
-  isPrinterConnected() {
+  void isPrinterConnected() {
     channel.invokeMethod("isPrinterConnected");
   }
 
-  rotate() {
+  void rotate() {
     this.isRotated = !this.isRotated;
   }
 
-  Future<dynamic> nativeMethodCallHandler(MethodCall methodCall) async {
+  Future<void> nativeMethodCallHandler(MethodCall methodCall) async {
     if (methodCall.method == "printerFound") {
-      onPrinterFound(
-          methodCall.arguments["Name"],
-          methodCall.arguments["Address"],
-          methodCall.arguments["IsWifi"].toString() == "true" ? true : false);
+      final newPrinter = ZebraDevice(
+        address: methodCall.arguments["Address"],
+        name: methodCall.arguments["Name"],
+        connected: false,
+        isWifi: methodCall.arguments["IsWifi"] == "true",
+      );
+      notifier.addPrinter(newPrinter);
     } else if (methodCall.method == "changePrinterStatus") {
-      onChangePrinterStatus(
-          methodCall.arguments["Status"], methodCall.arguments["Color"]);
+      final String status = methodCall.arguments["Status"];
+      final String color = methodCall.arguments["Color"];
+      notifier.updatePrinterStatus(status, color, selectedIndex);
     } else if (methodCall.method == "onPrinterDiscoveryDone") {
-      onPrinterDiscoveryDone();
-    } else if (methodCall.method == "onDiscoveryError") {
-      onDiscoveryError(methodCall.arguments["ErrorCode"]
-          , methodCall.arguments["ErrorText"]);
+      notifier.isDone = true;
+    } else if (methodCall.method == "onDiscoveryError" &&
+        onDiscoveryError != null) {
+      onDiscoveryError!(
+          methodCall.arguments["ErrorCode"], methodCall.arguments["ErrorText"]);
     }
-    return null;
   }
 
   String? id;
+}
+
+class ZebraPrinterNotifier extends ChangeNotifier {
+  final List<ZebraDevice> _printers = [];
+  List<ZebraDevice> get printers => List.unmodifiable(_printers);
+  bool _isDone = false;
+  void addPrinter(ZebraDevice printer) {
+    _printers.add(printer);
+    notifyListeners();
+  }
+
+  void updatePrinterStatus(String status, String color, int? index) {
+    if (index != null) {
+      Color newColor = Colors.grey.withOpacity(0.6);
+      switch (color) {
+        case 'R':
+          newColor = Colors.red;
+          break;
+        case 'G':
+          newColor = Colors.green;
+          break;
+        default:
+          newColor = Colors.grey.withOpacity(0.6);
+          break;
+      }
+      _printers[index] =
+          _printers[index].copyWith(status: status, color: newColor);
+      notifyListeners();
+    }
+  }
+
+  set isDone(bool value) {
+    _isDone = value;
+    notifyListeners();
+  }
+
+  bool get isDone => _isDone;
 }
