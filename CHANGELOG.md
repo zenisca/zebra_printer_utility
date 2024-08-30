@@ -12,3 +12,6 @@ Request access for local network in ios
 ## 0.0.40
 Upgrade dependencies 
 Enhance code quality and eliminate unnecessary code.
+
+## 0.0.41
+Include ZebraUtilPlugin.java in the repository.
