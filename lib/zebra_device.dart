@@ -52,11 +52,13 @@ class ZebraDevice {
 
   @override
   bool operator ==(Object other) {
-    return super == other &&
-        other is ZebraDevice &&
-        other.address == address &&
-        other.name == name;
+    if (identical(this, other)) return true;
+
+    return other is ZebraDevice && other.address == address;
   }
+
+  @override
+  int get hashCode => address.hashCode;
 
   ZebraDevice copyWith(
       {String? ipAddress,

@@ -15,7 +15,7 @@ class ZebraPrinter {
   Function? onPermissionDenied;
   bool isRotated = false;
   late ZebraPrinterNotifier notifier;
-  int? selectedIndex;
+  String? selectedAddress;
 
   ZebraPrinter(String id,
       {this.onDiscoveryError,
@@ -95,16 +95,11 @@ class ZebraPrinter {
   }
 
   void connectToPrinter(String address) {
-    selectedIndex =
-        notifier.printers.indexWhere((element) => element.address == address);
     channel.invokeMethod("connectToPrinter", {"Address": address});
   }
 
   void connectToGenericPrinter(String address) {
-    selectedIndex =
-        notifier.printers.indexWhere((element) => element.address == address);
-    channel
-        .invokeMethod("connectToGenericPrinter", {"Address": address});
+    channel.invokeMethod("connectToGenericPrinter", {"Address": address});
   }
 
   void print(String data) {
@@ -144,7 +139,7 @@ class ZebraPrinter {
     } else if (methodCall.method == "changePrinterStatus") {
       final String status = methodCall.arguments["Status"];
       final String color = methodCall.arguments["Color"];
-      notifier.updatePrinterStatus(status, color, selectedIndex);
+      notifier.updatePrinterStatus(status, color, selectedAddress);
     } else if (methodCall.method == "onPrinterDiscoveryDone") {
       notifier.isDone = true;
     } else if (methodCall.method == "onDiscoveryError" &&
@@ -161,13 +156,16 @@ class ZebraPrinterNotifier extends ChangeNotifier {
   final List<ZebraDevice> _printers = [];
   List<ZebraDevice> get printers => List.unmodifiable(_printers);
   bool _isDone = false;
+  
   void addPrinter(ZebraDevice printer) {
+    if(_printers.contains(printer)) return;
     _printers.add(printer);
     notifyListeners();
   }
 
-  void updatePrinterStatus(String status, String color, int? index) {
-    if (index != null) {
+  void updatePrinterStatus(
+      String status, String color, String? selectedAddress) {
+    if (selectedAddress != null) {
       Color newColor = Colors.grey.withOpacity(0.6);
       switch (color) {
         case 'R':
@@ -180,6 +178,8 @@ class ZebraPrinterNotifier extends ChangeNotifier {
           newColor = Colors.grey.withOpacity(0.6);
           break;
       }
+      final int index =
+          _printers.indexWhere((element) => element.address == selectedAddress);
       _printers[index] =
           _printers[index].copyWith(status: status, color: newColor);
       notifyListeners();

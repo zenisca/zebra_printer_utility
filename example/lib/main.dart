@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:zebrautil/zebra_device.dart';
 import 'package:zebrautil/zebra_printer.dart';
 import 'package:zebrautil/zebra_util.dart';
 
@@ -59,28 +60,53 @@ class _PrinterTemplateState extends State<PrinterTemplate> {
         appBar: AppBar(
           title: const Text("My Printers"),
         ),
-        body: ListenableBuilder(
-          listenable: zebraPrinter.notifier,
-          builder: (context, child) {
-            final printers = notifier.printers;
-            if (printers.isEmpty) {
-              return const Center(
-                child: Text("Printers not found"),
-              );
-            }
-            return ListView.builder(
-                itemBuilder: (BuildContext context, int index) {
-                  return ListTile(
-                      title: Text(printers[index].name),
-                      subtitle: Text(printers[index].status,
-                          style: TextStyle(color: printers[index].color)),
-                      leading: Icon(Icons.print, color: printers[index].color),
-                      onTap: () {
-                        zebraPrinter.connectToPrinter(printers[index].address);
-                      });
-                },
-                itemCount: printers.length);
-          },
+        body: RefreshIndicator(
+          onRefresh: () async => zebraPrinter.discoveryPrinters(),
+          child: ListenableBuilder(
+            listenable: zebraPrinter.notifier,
+            builder: (context, child) {
+              final printers = notifier.printers;
+              if (!notifier.isDone) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (printers.isEmpty) {
+                return _getNotAvailablePage();
+              }
+              return _getListDevices(printers);
+            },
+          ),
         ));
+  }
+
+  Widget _getListDevices(List<ZebraDevice> printers) {
+    return ListView.builder(
+        itemBuilder: (BuildContext context, int index) {
+          return ListTile(
+              title: Text(printers[index].name),
+              subtitle: Text(printers[index].status,
+                  style: TextStyle(color: printers[index].color)),
+              leading: Icon(Icons.print, color: printers[index].color),
+              onTap: () {
+                zebraPrinter.connectToPrinter(printers[index].address);
+              });
+        },
+        itemCount: printers.length);
+  }
+
+  SizedBox _getNotAvailablePage() {
+    return SizedBox(
+      width: double.infinity,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisSize: MainAxisSize.max,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text("Printers not found"),
+          ElevatedButton(
+              onPressed: zebraPrinter.discoveryPrinters,
+              child: const Text("Retry"))
+        ],
+      ),
+    );
   }
 }

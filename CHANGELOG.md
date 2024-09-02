@@ -15,3 +15,7 @@ Enhance code quality and eliminate unnecessary code.
 
 ## 0.0.41
 Include ZebraUtilPlugin.java in the repository.
+
+## 0.1.41 
+Avoid duplicate devices.
+Improve list devices example.
