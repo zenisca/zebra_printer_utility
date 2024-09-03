@@ -21,4 +21,4 @@ Avoid duplicate devices.
 Improve list devices example.
 
 ## 0.2.41
-Update view according state printer
+Update view based on printer state
