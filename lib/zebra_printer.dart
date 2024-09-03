@@ -95,10 +95,12 @@ class ZebraPrinter {
   }
 
   void connectToPrinter(String address) {
+    selectedAddress = address;
     channel.invokeMethod("connectToPrinter", {"Address": address});
   }
 
   void connectToGenericPrinter(String address) {
+    selectedAddress = address;
     channel.invokeMethod("connectToGenericPrinter", {"Address": address});
   }
 

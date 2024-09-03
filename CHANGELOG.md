@@ -19,3 +19,6 @@ Include ZebraUtilPlugin.java in the repository.
 ## 0.1.41 
 Avoid duplicate devices.
 Improve list devices example.
+
+## 0.2.41
+Update view according state printer
