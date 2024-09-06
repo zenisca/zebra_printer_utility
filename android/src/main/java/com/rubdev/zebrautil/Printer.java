@@ -582,6 +582,7 @@ public class Printer implements MethodChannel.MethodCallHandler {
                 @Override
                 public void run() {
                     disconnect();
+                    result.success(true);
                 }
             }).start();
         } else if (call.method.equals("isPrinterConnected")) {

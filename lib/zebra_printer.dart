@@ -94,12 +94,24 @@ class ZebraPrinter {
     _setSettings(Command.mediaType, mediaType);
   }
 
-  void connectToPrinter(String address) {
+  Future<void> connectToPrinter(String address) async {
+    if(selectedAddress != null){
+      await disconnect(address: address);
+      await Future.delayed(Durations.medium1);
+    }
+    if(selectedAddress == address){
+      await disconnect(address: address);
+      selectedAddress = null;
+      return;
+    }
     selectedAddress = address;
     channel.invokeMethod("connectToPrinter", {"Address": address});
   }
 
   void connectToGenericPrinter(String address) {
+    if(selectedAddress != null){
+      disconnect(address: address);
+    }
     selectedAddress = address;
     channel.invokeMethod("connectToGenericPrinter", {"Address": address});
   }
@@ -113,8 +125,9 @@ class ZebraPrinter {
     channel.invokeMethod("print", {"Data": data});
   }
 
-  void disconnect() {
-    channel.invokeMethod("disconnect", null);
+  Future<void> disconnect({required String address}) async {
+    await channel.invokeMethod("disconnect", null);
+    notifier.disconnectPrinter(address);
   }
 
   void calibratePrinter() {
@@ -162,6 +175,12 @@ class ZebraPrinterNotifier extends ChangeNotifier {
   void addPrinter(ZebraDevice printer) {
     if(_printers.contains(printer)) return;
     _printers.add(printer);
+    notifyListeners();
+  }
+
+  void disconnectPrinter(String address) {
+    final int index = _printers.indexWhere((element) => element.address == address);
+    _printers[index] = _printers[index].copyWith(connected: false);
     notifyListeners();
   }
 
