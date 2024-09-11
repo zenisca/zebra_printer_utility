@@ -30,6 +30,7 @@ android {
 
 Include the necessary permission in the Android Manifest.
 ```sh
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
@@ -72,33 +73,26 @@ You can then pass callbacks for either `onDiscoveryError`, `onPermissionDenied`,
 After configuring the instance, use the following method to start searching for available devices:
 
 ```sh
-  zebraPrinter.discoveryPrinters();
+  zebraPrinter.startScanning();
 ```
+It won't stop automatically, if you wish to stop the scan you must call:
+
+ ```sh
+  zebraPrinter.stopScanning();
+```
+
 To listen for and display any devices (`ZebraDevice`), you can use the Zebra printer `notifier`
 ```sh
-  ListenableBuilder(
-      listenable: zebraPrinter.notifier,
-      builder: (context, child) {
-        final printers = notifier.printers;
-        if (printers.isEmpty) {
-          return const Center(
-            child: Text("Printers not found"),
-          );
-        }
-        return ListView.builder(
-            itemBuilder: (BuildContext context, int index) {
-              return ListTile(
-                  title: Text(printers[index].name),
-                  subtitle: Text(printers[index].status,
-                      style: TextStyle(color: printers[index].color)),
-                  leading: Icon(Icons.print, color: printers[index].color),
-                  onTap: () {
-                    zebraPrinter.connectToPrinter(printers[index].address);
-                  });
-            },
-            itemCount: printers.length);
-      },
-    )
+ListenableBuilder(
+    listenable: zebraPrinter.notifier,
+    builder: (context, child) {
+      final printers = notifier.printers;
+      if (printers.isEmpty) {
+        return _getNotAvailablePage();
+      }
+      return _getListDevices(printers);
+    },
+  )
 ```
 
 For connecting to printer, pass ipAddreess for wifi printer or macAddress for bluetooth printer to `connectToPrinter` method.
