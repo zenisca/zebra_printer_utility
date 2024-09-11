@@ -49,7 +49,7 @@ class _PrinterTemplateState extends State<PrinterTemplate> {
   void initState() {
     zebraPrinter = widget.printer;
     notifier = zebraPrinter.notifier;
-    zebraPrinter.discoveryPrinters();
+    zebraPrinter.startScanning();
 
     super.initState();
   }
@@ -58,23 +58,29 @@ class _PrinterTemplateState extends State<PrinterTemplate> {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          title: const Text("My Printers"),
+          title: _GetAppCustom(zebraPrinter.isScanning),
         ),
-        body: RefreshIndicator(
-          onRefresh: () async => zebraPrinter.discoveryPrinters(),
-          child: ListenableBuilder(
-            listenable: zebraPrinter.notifier,
-            builder: (context, child) {
-              final printers = notifier.printers;
-              if (!notifier.isDone) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (printers.isEmpty) {
-                return _getNotAvailablePage();
-              }
-              return _getListDevices(printers);
-            },
-          ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () {
+            if (zebraPrinter.isScanning) {
+              zebraPrinter.stopScanning();
+            } else {
+              zebraPrinter.startScanning();
+            }
+            setState(() {});
+          },
+          child: Icon(
+              zebraPrinter.isScanning ? Icons.stop_circle : Icons.play_circle),
+        ),
+        body: ListenableBuilder(
+          listenable: zebraPrinter.notifier,
+          builder: (context, child) {
+            final printers = notifier.printers;
+            if (printers.isEmpty) {
+              return _getNotAvailablePage();
+            }
+            return _getListDevices(printers);
+          },
         ));
   }
 
@@ -94,19 +100,35 @@ class _PrinterTemplateState extends State<PrinterTemplate> {
   }
 
   SizedBox _getNotAvailablePage() {
-    return SizedBox(
+    return const SizedBox(
       width: double.infinity,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisSize: MainAxisSize.max,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text("Printers not found"),
-          ElevatedButton(
-              onPressed: zebraPrinter.discoveryPrinters,
-              child: const Text("Retry"))
+          Text("Printers not found"),
         ],
       ),
+    );
+  }
+}
+
+class _GetAppCustom extends StatelessWidget {
+  const _GetAppCustom(this.isScanning);
+  final bool isScanning;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        const Text("My Printers"),
+        if (isScanning)
+          const Text(
+            "Seaching for printers...",
+            style: TextStyle(color: Colors.grey, fontSize: 12),
+          ),
+      ],
     );
   }
 }

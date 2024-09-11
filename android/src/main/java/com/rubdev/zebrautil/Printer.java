@@ -55,8 +55,6 @@ public class Printer implements MethodChannel.MethodCallHandler {
     private boolean tempIsPrinterConnect;
     private static ArrayList<DiscoveredPrinter> discoveredPrinters = new ArrayList<>();
     private static ArrayList<DiscoveredPrinter> sendedDiscoveredPrinters = new ArrayList<>();
-    private static int countDiscovery = 0;
-    private static int countEndScan = 0;
     private boolean isZebraPrinter = true;
     private Socketmanager socketmanager;
 
@@ -69,7 +67,7 @@ public class Printer implements MethodChannel.MethodCallHandler {
     }
 
 
-    public static void discoveryPrinters(final Context context, final MethodChannel methodChannel) {
+    public static void startScanning(final Context context, final MethodChannel methodChannel) {
 
         try {
             sendedDiscoveredPrinters.clear();
@@ -77,8 +75,7 @@ public class Printer implements MethodChannel.MethodCallHandler {
                     discoveredPrinters) {
                 addNewDiscoverPrinter(dp, context, methodChannel);
             }
-            countEndScan = 0;
-            BluetoothDiscoverer.findPrinters(context, new DiscoveryHandler() {
+            BluetoothDiscoverer.findPrinters(context, new DiscoveryHandlerCustom() {
                 @Override
                 public void foundPrinter(final DiscoveredPrinter discoveredPrinter) {
                     discoveredPrinters.add(discoveredPrinter);
@@ -91,9 +88,13 @@ public class Printer implements MethodChannel.MethodCallHandler {
                 }
 
                 @Override
+                public void printerOutOfRange(DiscoveredPrinter discoverPrinter) {
+                    removeDiscoverPrinter(discoverPrinter,context,methodChannel);
+                }
+
+                @Override
                 public void discoveryFinished() {
-                    countEndScan++;
-                    finishScanPrinter(context, methodChannel);
+                    //TODO: missing implmentation
                 }
 
                 @Override
@@ -102,30 +103,29 @@ public class Printer implements MethodChannel.MethodCallHandler {
                         onDiscoveryError(context, methodChannel, ON_DISCOVERY_ERROR_BLUETOOTH, s);
                     else
                         onDiscoveryError(context, methodChannel, ON_DISCOVERY_ERROR_GENERAL, s);
-                    countEndScan++;
-                    finishScanPrinter(context, methodChannel);
                 }
             });
 
 
-            NetworkDiscoverer.findPrinters(new DiscoveryHandler() {
+            NetworkDiscoverer.findPrinters(new DiscoveryHandlerCustom() {
                 @Override
                 public void foundPrinter(DiscoveredPrinter discoveredPrinter) {
                     addNewDiscoverPrinter(discoveredPrinter, context, methodChannel);
+                }
 
+                @Override
+                public void printerOutOfRange(DiscoveredPrinter discoverPrinter) {
+                    removeDiscoverPrinter(discoverPrinter,context,methodChannel);
                 }
 
                 @Override
                 public void discoveryFinished() {
-                    countEndScan++;
-                    finishScanPrinter(context, methodChannel);
+                    //TODO: missing implmentation
                 }
 
                 @Override
                 public void discoveryError(String s) {
                     onDiscoveryError(context, methodChannel, ON_DISCOVERY_ERROR_GENERAL, s);
-                    countEndScan++;
-                    finishScanPrinter(context, methodChannel);
                 }
             });
         } catch (Exception e) {
@@ -190,6 +190,10 @@ public class Printer implements MethodChannel.MethodCallHandler {
         discoveredPrinters.add(discoveredPrinter);
     }
 
+    private static void removePrinterToDiscoveryPrinterList(DiscoveredPrinter discoveredPrinter){
+        discoveredPrinters.remove(discoveredPrinter);
+    }
+
 
     private static void addNewDiscoverPrinter(final DiscoveredPrinter discoveredPrinter, Context context, final MethodChannel methodChannel) {
 
@@ -221,31 +225,17 @@ public class Printer implements MethodChannel.MethodCallHandler {
         });
     }
 
-
-    private static void finishScanPrinter(final Context context, final MethodChannel methodChannel) {
-        if (countEndScan == 2) {
-            if (discoveredPrinters.size() == 0) {
-                if (discoveryPrintersAgain(context, methodChannel))
-                    return;
-            }
-            ((Activity) context).runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    methodChannel.invokeMethod("onPrinterDiscoveryDone",
-                            context.getResources().getString(R.string.done));
-                }
-            });
+    private static void removeDiscoverPrinter(final DiscoveredPrinter discoveredPrinter, Context context,final MethodChannel methodChannel){
+        removePrinterToDiscoveryPrinterList(discoveredPrinter);
+    ((Activity) context).runOnUiThread(new Runnable() {
+        @Override
+        public void run() {
+            sendedDiscoveredPrinters.remove(discoveredPrinter);
+            HashMap<String, Object> arguments = new HashMap<>();
+            arguments.put("Address", discoveredPrinter.address);
+            methodChannel.invokeMethod("printerRemoved", arguments);
         }
-    }
-
-    private static boolean discoveryPrintersAgain(Context context, MethodChannel methodChannel) {
-        System.out.print("Discovery printers again");
-        countDiscovery++;
-        if (countDiscovery < 2) {
-            discoveryPrinters(context, methodChannel);
-            return true;
-        }
-        return false;
+    });
     }
 
 
@@ -399,6 +389,14 @@ public class Printer implements MethodChannel.MethodCallHandler {
         }
     }
 
+    public void stopScan(){
+        try{
+            BluetoothDiscoverer.stopBluetoothDiscovery();
+        }catch(Exception e){
+            setStatus(context.getString(R.string.stopping_scan), context.getString(R.string.connectedColor));
+        }
+    }
+
 
     public ZebraPrinter connect(boolean isBluetoothPrinter) {
         if (isPrinterConnect().equals(context.getString(R.string.connected))) {
@@ -477,7 +475,6 @@ public class Printer implements MethodChannel.MethodCallHandler {
         ((Activity) context).runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                System.out.println("Printer set status: " + message);
                 HashMap<String, Object> arguments = new HashMap<>();
                 arguments.put("Status", message);
                 arguments.put("Color", color);
@@ -587,9 +584,9 @@ public class Printer implements MethodChannel.MethodCallHandler {
             }).start();
         } else if (call.method.equals("isPrinterConnected")) {
             result.success(isPrinterConnect());
-        } else if (call.method.equals("discoverPrinters")) {
+        } else if (call.method.equals("startScan")) {
             if (checkIsLocationNetworkProviderIsOn()) {
-                discoveryPrinters(context, methodChannel);
+                startScanning(context, methodChannel);
             } else {
                 onDiscoveryError(context, methodChannel, ON_DISCOVERY_ERROR_LOCATION, "Your location service is off.");
             }
@@ -619,7 +616,9 @@ public class Printer implements MethodChannel.MethodCallHandler {
 
         } else if (call.method.equals(("connectToGenericPrinter"))) {
             connectToGenericPrinter(call.argument("Address").toString());
-        } else {
+        } else if (call.method.equals(("stopScan"))) {
+            stopScan();
+        }else {
             result.notImplemented();
         }
     }

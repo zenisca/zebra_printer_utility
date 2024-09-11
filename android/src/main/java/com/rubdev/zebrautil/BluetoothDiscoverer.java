@@ -1,7 +1,3 @@
-//
-// Source code recreated from a .class file by IntelliJ IDEA
-// (powered by Fernflower decompiler)
-//
 
 package com.rubdev.zebrautil;
 
@@ -13,58 +9,51 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
-import com.zebra.sdk.comm.ConnectionException;
-import com.zebra.sdk.comm.internal.BluetoothHelper;
-import com.zebra.sdk.comm.internal.BtServiceDiscoverer;
+import android.os.Handler;
+
 import com.zebra.sdk.printer.discovery.DeviceFilter;
 import com.zebra.sdk.printer.discovery.DiscoveredPrinterBluetooth;
-import com.zebra.sdk.printer.discovery.DiscoveryHandler;
-import com.zebra.sdk.printer.discovery.ServiceDiscoveryHandler;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 public class BluetoothDiscoverer {
-    private Context mContext;
-    private DiscoveryHandler mDiscoveryHandler;
+    private final Context mContext;
+    private final DiscoveryHandlerCustom mDiscoveryHandler;
     BluetoothDiscoverer.BtReceiver btReceiver;
     BluetoothDiscoverer.BtRadioMonitor btMonitor;
-    private DeviceFilter deviceFilter;
+    private final DeviceFilter deviceFilter;
+    private static BluetoothDiscoverer bluetoothDiscoverer;
 
-    private BluetoothDiscoverer(Context var1, DiscoveryHandler var2, DeviceFilter var3) {
-        this.mContext = var1;
-        this.deviceFilter = var3;
-        this.mDiscoveryHandler = var2;
+    private BluetoothDiscoverer(Context context, DiscoveryHandlerCustom handler, DeviceFilter filter) {
+        this.mContext = context.getApplicationContext();
+        this.deviceFilter = filter;
+        this.mDiscoveryHandler = handler;
     }
 
-    public static void findPrinters(Context var0, DiscoveryHandler var1, DeviceFilter var2) throws ConnectionException {
+    public static void findPrinters(Context context, DiscoveryHandlerCustom handler, DeviceFilter filter) {
         BluetoothAdapter var3 = BluetoothAdapter.getDefaultAdapter();
         if (var3 == null) {
-            var1.discoveryError("No bluetooth radio found");
+            handler.discoveryError("No bluetooth radio found");
         } else if (!var3.isEnabled()) {
-            var1.discoveryError("Bluetooth radio is currently disabled");
+            handler.discoveryError("Bluetooth radio is currently disabled");
         } else {
             if (var3.isDiscovering()) {
                 var3.cancelDiscovery();
             }
 
-            (new BluetoothDiscoverer(var0.getApplicationContext(), var1, var2)).doBluetoothDisco();
+            if (bluetoothDiscoverer == null) {
+                bluetoothDiscoverer = new BluetoothDiscoverer(context.getApplicationContext(), handler, filter);
+            }
+            bluetoothDiscoverer.doBluetoothDisco();
         }
 
     }
 
-    public static void findPrinters(Context var0, DiscoveryHandler var1) throws ConnectionException {
-        DeviceFilter var2 = new DeviceFilter() {
-            public boolean shouldAddPrinter(BluetoothDevice var1) {
-                return true;
-            }
-        };
-        findPrinters(var0, var1, var2);
-    }
-
-    public static void findServices(Context var0, String var1, ServiceDiscoveryHandler var2) {
-        BtServiceDiscoverer var3 = new BtServiceDiscoverer(BluetoothHelper.formatMacAddress(var1), var2);
-        var3.doDiscovery(var0);
+    public static void findPrinters(Context context, DiscoveryHandlerCustom handler)  {
+        DeviceFilter filter = value -> true;
+        findPrinters(context, handler, filter);
     }
 
     private void unregisterTopLevelReceivers(Context var1) {
@@ -75,19 +64,27 @@ public class BluetoothDiscoverer {
         if (this.btMonitor != null) {
             var1.unregisterReceiver(this.btMonitor);
         }
+    }
 
+    public static void stopBluetoothDiscovery() {
+        if (bluetoothDiscoverer != null) {
+            bluetoothDiscoverer.unregisterTopLevelReceivers(bluetoothDiscoverer.mContext);
+            bluetoothDiscoverer = null;
+        }
     }
 
     private void doBluetoothDisco() {
         this.btReceiver = new BluetoothDiscoverer.BtReceiver();
         this.btMonitor = new BluetoothDiscoverer.BtRadioMonitor();
-        IntentFilter var1 = new IntentFilter("android.bluetooth.device.action.FOUND");
-        IntentFilter var2 = new IntentFilter("android.bluetooth.adapter.action.DISCOVERY_FINISHED");
-        IntentFilter var3 = new IntentFilter("android.bluetooth.adapter.action.STATE_CHANGED");
+        IntentFilter var1 = new IntentFilter(BluetoothDevice.ACTION_FOUND);
+        IntentFilter var2 = new IntentFilter(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
+        IntentFilter var3 = new IntentFilter(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED);
+
         this.mContext.registerReceiver(this.btReceiver, var1);
         this.mContext.registerReceiver(this.btReceiver, var2);
         this.mContext.registerReceiver(this.btMonitor, var3);
         BluetoothAdapter.getDefaultAdapter().startDiscovery();
+
     }
 
     private class BtRadioMonitor extends BroadcastReceiver {
@@ -96,12 +93,14 @@ public class BluetoothDiscoverer {
 
         public void onReceive(Context var1, Intent var2) {
             String var3 = var2.getAction();
-            if ("android.bluetooth.adapter.action.STATE_CHANGED".equals(var3)) {
+            if (BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED.equals(var3)) {
                 Bundle var4 = var2.getExtras();
-                int var5 = var4.getInt("android.bluetooth.adapter.extra.STATE");
+                if(var4 == null){
+                    return;
+                }
+                int var5 = var4.getInt(BluetoothAdapter.EXTRA_STATE);
                 if (var5 == 10) {
                     BluetoothDiscoverer.this.mDiscoveryHandler.discoveryFinished();
-                    BluetoothDiscoverer.this.unregisterTopLevelReceivers(var1);
                 }
             }
 
@@ -110,28 +109,52 @@ public class BluetoothDiscoverer {
 
     private class BtReceiver extends BroadcastReceiver {
         private static final int BLUETOOTH_PRINTER_CLASS = 1664;
-        private Map<String, BluetoothDevice> foundDevices;
+        private static final long DISCOVERY_INTERVAL = 10000;
+        private static final long DEVICE_TIMEOUT = 25000;
+        private final Map<BluetoothDevice,Long> foundDevices;
 
         private BtReceiver() {
-            this.foundDevices = new HashMap();
+            this.foundDevices = new HashMap<>();
         }
 
-        public void onReceive(Context var1, Intent var2) {
-            String var3 = var2.getAction();
-            if ("android.bluetooth.device.action.FOUND".equals(var3)) {
-                this.processFoundPrinter(var2);
-            } else if ("android.bluetooth.adapter.action.DISCOVERY_FINISHED".equals(var3)) {
+        public void onReceive(Context var1, Intent intent) {
+            String action = intent.getAction();
+            if (BluetoothDevice.ACTION_FOUND.equals(action)) {
+                this.processFoundPrinter(intent);
+            } else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)) {
+                checkForMissingDevices();
                 BluetoothDiscoverer.this.mDiscoveryHandler.discoveryFinished();
-                BluetoothDiscoverer.this.unregisterTopLevelReceivers(var1);
+                new Handler().postDelayed(() -> BluetoothAdapter.getDefaultAdapter().startDiscovery(), DISCOVERY_INTERVAL);
             }
 
         }
 
+        private void checkForMissingDevices() {
+            long currentTime = System.currentTimeMillis();
+            Iterator<Map.Entry<BluetoothDevice, Long>> iterator = foundDevices.entrySet().iterator();
+            while (iterator.hasNext()) {
+                Map.Entry<BluetoothDevice,Long> entry = iterator.next();
+                long lastSeenTime = entry.getValue();
+                BluetoothDevice lastSeenDevice = entry.getKey();
+               if (currentTime - lastSeenTime > DEVICE_TIMEOUT) {
+                   mDiscoveryHandler.printerOutOfRange(
+                            new DiscoveredPrinterBluetooth(
+                                    lastSeenDevice.getAddress(),
+                                    lastSeenDevice.getName()));
+                    iterator.remove();
+                }
+            }
+        }
+
         private void processFoundPrinter(Intent var1) {
-            BluetoothDevice var2 = (BluetoothDevice)var1.getParcelableExtra("android.bluetooth.device.extra.DEVICE");
-            if (!this.foundDevices.keySet().contains(var2.getAddress()) && BluetoothDiscoverer.this.deviceFilter != null && BluetoothDiscoverer.this.deviceFilter.shouldAddPrinter(var2) && this.isPrinterClass(var2)) {
+            BluetoothDevice var2 = (BluetoothDevice)var1.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+            if(var2 == null){
+                return;
+            }
+            if (this.isPrinterClass(var2) && BluetoothDiscoverer.this.deviceFilter != null && BluetoothDiscoverer.this.deviceFilter.shouldAddPrinter(var2)) {
                 BluetoothDiscoverer.this.mDiscoveryHandler.foundPrinter(new DiscoveredPrinterBluetooth(var2.getAddress(), var2.getName()));
-                this.foundDevices.put(var2.getAddress(), var2);
+                Long foundAt = System.currentTimeMillis();
+                this.foundDevices.put(var2, foundAt);
             }
 
         }
@@ -139,7 +162,7 @@ public class BluetoothDiscoverer {
         private boolean isPrinterClass(BluetoothDevice var1) {
             BluetoothClass var2 = var1.getBluetoothClass();
             if (var2 != null) {
-                return var2.getDeviceClass() == 1664;
+                return var2.getDeviceClass() == BLUETOOTH_PRINTER_CLASS;
             } else {
                 return false;
             }

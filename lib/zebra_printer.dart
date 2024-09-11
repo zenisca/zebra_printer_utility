@@ -14,6 +14,7 @@ class ZebraPrinter {
   Function(String, String?)? onDiscoveryError;
   Function? onPermissionDenied;
   bool isRotated = false;
+  bool isScanning = false;
   late ZebraPrinterNotifier notifier;
   String? selectedAddress;
 
@@ -26,16 +27,22 @@ class ZebraPrinter {
     this.notifier = notifier ?? ZebraPrinterNotifier();
   }
 
-  void discoveryPrinters() {
-    notifier.isDone = false;
+  void startScanning() {
+    isScanning = true;
+    notifier.cleanAll(); 
     channel.invokeMethod("checkPermission").then((isGrantPermission) {
       if (isGrantPermission) {
-        channel.invokeMethod("discoverPrinters");
+        channel.invokeMethod("startScan");
       } else {
-        notifier.isDone = true;
+        isScanning = false;
         if (onPermissionDenied != null) onPermissionDenied!();
       }
     });
+  }
+
+  void stopScanning() {
+    isScanning = false;
+    channel.invokeMethod("stopScan");
   }
 
   void _setSettings(Command setting, dynamic values) {
@@ -116,7 +123,7 @@ class ZebraPrinter {
     channel.invokeMethod("connectToGenericPrinter", {"Address": address});
   }
 
-  void print(String data) {
+  void print({required String data}) {
     if (!data.contains("^PON")) data = data.replaceAll("^XA", "^XA^PON");
 
     if (isRotated) {
@@ -151,12 +158,13 @@ class ZebraPrinter {
         isWifi: methodCall.arguments["IsWifi"] == "true",
       );
       notifier.addPrinter(newPrinter);
-    } else if (methodCall.method == "changePrinterStatus") {
+    } else if(methodCall.method == "printerRemoved"){
+      final String address = methodCall.arguments["Address"];
+      notifier.removePrinter(address);
+    }else if (methodCall.method == "changePrinterStatus") {
       final String status = methodCall.arguments["Status"];
       final String color = methodCall.arguments["Color"];
       notifier.updatePrinterStatus(status, color, selectedAddress);
-    } else if (methodCall.method == "onPrinterDiscoveryDone") {
-      notifier.isDone = true;
     } else if (methodCall.method == "onDiscoveryError" &&
         onDiscoveryError != null) {
       onDiscoveryError!(
@@ -168,14 +176,22 @@ class ZebraPrinter {
 }
 
 class ZebraPrinterNotifier extends ChangeNotifier {
-  final List<ZebraDevice> _printers = [];
+  List<ZebraDevice> _printers = [];
   List<ZebraDevice> get printers => List.unmodifiable(_printers);
-  bool _isDone = false;
   
   void addPrinter(ZebraDevice printer) {
     if(_printers.contains(printer)) return;
     _printers.add(printer);
     notifyListeners();
+  }
+
+  void removePrinter(String address) {
+    _printers.removeWhere((element) => element.address == address);
+    notifyListeners();
+  }
+
+  void cleanAll() {
+    _printers.clear();
   }
 
   void disconnectPrinter(String address) {
@@ -207,10 +223,5 @@ class ZebraPrinterNotifier extends ChangeNotifier {
     }
   }
 
-  set isDone(bool value) {
-    _isDone = value;
-    notifyListeners();
-  }
 
-  bool get isDone => _isDone;
 }
