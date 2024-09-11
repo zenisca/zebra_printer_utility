@@ -2,6 +2,7 @@ package com.rubdev.zebrautil;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -18,6 +19,7 @@ import android.util.Base64;
 
 import androidx.annotation.NonNull;
 
+import com.rubdev.zebrautil.helper.LocaleHelper;
 import com.zebra.sdk.comm.BluetoothConnection;
 import com.zebra.sdk.comm.Connection;
 import com.zebra.sdk.comm.ConnectionException;
@@ -618,7 +620,10 @@ public class Printer implements MethodChannel.MethodCallHandler {
             connectToGenericPrinter(call.argument("Address").toString());
         } else if (call.method.equals(("stopScan"))) {
             stopScan();
-        }else {
+        } else if(call.method.equals("setLanguage")){
+            String language = call.argument("Language");
+            LocaleHelper.setLocale(context.getResources(), language);
+        } else {
             result.notImplemented();
         }
     }

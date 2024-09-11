@@ -29,7 +29,7 @@ class ZebraPrinter {
 
   void startScanning() {
     isScanning = true;
-    notifier.cleanAll(); 
+    notifier.cleanAll();
     channel.invokeMethod("checkPermission").then((isGrantPermission) {
       if (isGrantPermission) {
         channel.invokeMethod("startScan");
@@ -101,12 +101,16 @@ class ZebraPrinter {
     _setSettings(Command.mediaType, mediaType);
   }
 
+  void setLanguage({required String language}) {
+    channel.invokeMethod("setLanguage", {"Language": language});
+  }
+
   Future<void> connectToPrinter(String address) async {
-    if(selectedAddress != null){
+    if (selectedAddress != null) {
       await disconnect(address: address);
       await Future.delayed(Durations.medium1);
     }
-    if(selectedAddress == address){
+    if (selectedAddress == address) {
       await disconnect(address: address);
       selectedAddress = null;
       return;
@@ -115,9 +119,15 @@ class ZebraPrinter {
     channel.invokeMethod("connectToPrinter", {"Address": address});
   }
 
-  void connectToGenericPrinter(String address) {
-    if(selectedAddress != null){
-      disconnect(address: address);
+  Future<void> connectToGenericPrinter(String address) async {
+    if (selectedAddress != null) {
+      await disconnect(address: address);
+      await Future.delayed(Durations.medium1);
+    }
+    if (selectedAddress == address) {
+      await disconnect(address: address);
+      selectedAddress = null;
+      return;
     }
     selectedAddress = address;
     channel.invokeMethod("connectToGenericPrinter", {"Address": address});
@@ -158,10 +168,10 @@ class ZebraPrinter {
         isWifi: methodCall.arguments["IsWifi"] == "true",
       );
       notifier.addPrinter(newPrinter);
-    } else if(methodCall.method == "printerRemoved"){
+    } else if (methodCall.method == "printerRemoved") {
       final String address = methodCall.arguments["Address"];
       notifier.removePrinter(address);
-    }else if (methodCall.method == "changePrinterStatus") {
+    } else if (methodCall.method == "changePrinterStatus") {
       final String status = methodCall.arguments["Status"];
       final String color = methodCall.arguments["Color"];
       notifier.updatePrinterStatus(status, color, selectedAddress);
@@ -178,9 +188,9 @@ class ZebraPrinter {
 class ZebraPrinterNotifier extends ChangeNotifier {
   List<ZebraDevice> _printers = [];
   List<ZebraDevice> get printers => List.unmodifiable(_printers);
-  
+
   void addPrinter(ZebraDevice printer) {
-    if(_printers.contains(printer)) return;
+    if (_printers.contains(printer)) return;
     _printers.add(printer);
     notifyListeners();
   }
@@ -195,7 +205,8 @@ class ZebraPrinterNotifier extends ChangeNotifier {
   }
 
   void disconnectPrinter(String address) {
-    final int index = _printers.indexWhere((element) => element.address == address);
+    final int index =
+        _printers.indexWhere((element) => element.address == address);
     _printers[index] = _printers[index].copyWith(connected: false);
     notifyListeners();
   }
@@ -222,6 +233,4 @@ class ZebraPrinterNotifier extends ChangeNotifier {
       notifyListeners();
     }
   }
-
-
 }

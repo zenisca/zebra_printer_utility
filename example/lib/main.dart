@@ -50,7 +50,6 @@ class _PrinterTemplateState extends State<PrinterTemplate> {
     zebraPrinter = widget.printer;
     notifier = zebraPrinter.notifier;
     zebraPrinter.startScanning();
-
     super.initState();
   }
 

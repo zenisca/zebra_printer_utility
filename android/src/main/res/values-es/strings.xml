@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="disconnect">Desconectado</string>
+    <string name="connected">Conectado</string>
+    <string name="connecting">Conectando</string>
+    <string name="disconnecting">Desconectando</string>
+    <string name="scanning">Escaneando</string>
+    <string name="stopping_scan">Deteniendo escaneo</string>
+    <string name="done">Completado</string>
+
+
+    <string name="disconnectColor">R</string>
+    <string name="connectedColor">G</string>
+    <string name="connectingColor">Y</string>
+    <string name="sending_data">Enviando información</string>
+
+</resources>

@@ -26,3 +26,15 @@ Update view based on printer state.
 ## 0.3.41
 Dynamically disconnect the current printer when the user selects a different one.
 Change the color and update the state once the printer is disconnected.
+
+## 1.3.41
+* Automatic Bluetooth Device Scanning:
+
+Implemented continuous scanning for nearby Bluetooth devices to improve device discovery without manual intervention.
+Added background listening for Bluetooth device connections and disconnections, ensuring real-time updates for device availability.
+
+* Code Quality Enhancements:
+
+Refactored Bluetooth scanning logic to optimize memory usage and prevent potential memory leaks.
+Improved thread management to prevent excessive thread creation during Bluetooth operations.
+Applied coding best practices, including proper resource management and context handling, to improve maintainability and performance.

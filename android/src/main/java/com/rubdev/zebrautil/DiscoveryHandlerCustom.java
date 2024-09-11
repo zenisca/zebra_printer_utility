@@ -5,4 +5,6 @@ import com.zebra.sdk.printer.discovery.DiscoveryHandler;
 
 public interface DiscoveryHandlerCustom extends DiscoveryHandler {
     void printerOutOfRange(DiscoveredPrinter discoverPrinter);
+
+
 }
