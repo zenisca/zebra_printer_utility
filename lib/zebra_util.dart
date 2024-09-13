@@ -7,9 +7,12 @@ class ZebraUtil {
 
   static Future<ZebraPrinter> getPrinterInstance(
       {Function(String, String?)? onDiscoveryError,
-      Function? onPermissionDenied}) async {
+      Function? onPermissionDenied,
+      ZebraController? controller}) async {
     String id = await _channel.invokeMethod("getInstance");
-    ZebraPrinter printer = ZebraPrinter(id,
+    ZebraPrinter printer = ZebraPrinter(
+      id,
+      controller: controller,
         onDiscoveryError: onDiscoveryError,
         onPermissionDenied: onPermissionDenied);
     return printer;

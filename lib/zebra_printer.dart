@@ -15,21 +15,21 @@ class ZebraPrinter {
   Function? onPermissionDenied;
   bool isRotated = false;
   bool isScanning = false;
-  late ZebraPrinterNotifier notifier;
-  String? selectedAddress;
+  bool shouldSync = false;
+  late ZebraController controller;
 
   ZebraPrinter(String id,
       {this.onDiscoveryError,
       this.onPermissionDenied,
-      ZebraPrinterNotifier? notifier}) {
+      ZebraController? controller}) {
     channel = MethodChannel('ZebraPrinterObject' + id);
     channel.setMethodCallHandler(nativeMethodCallHandler);
-    this.notifier = notifier ?? ZebraPrinterNotifier();
+    this.controller = controller ?? ZebraController();
   }
 
   void startScanning() {
     isScanning = true;
-    notifier.cleanAll();
+    controller.cleanAll();
     channel.invokeMethod("checkPermission").then((isGrantPermission) {
       if (isGrantPermission) {
         channel.invokeMethod("startScan");
@@ -42,6 +42,7 @@ class ZebraPrinter {
 
   void stopScanning() {
     isScanning = false;
+    shouldSync = true;
     channel.invokeMethod("stopScan");
   }
 
@@ -106,30 +107,30 @@ class ZebraPrinter {
   }
 
   Future<void> connectToPrinter(String address) async {
-    if (selectedAddress != null) {
-      await disconnect(address: address);
+    if (controller.selectedAddress != null) {
+      await disconnect();
       await Future.delayed(Durations.medium1);
     }
-    if (selectedAddress == address) {
-      await disconnect(address: address);
-      selectedAddress = null;
+    if (controller.selectedAddress == address) {
+      await disconnect();
+      controller.selectedAddress = null;
       return;
     }
-    selectedAddress = address;
+    controller.selectedAddress = address;
     channel.invokeMethod("connectToPrinter", {"Address": address});
   }
 
   Future<void> connectToGenericPrinter(String address) async {
-    if (selectedAddress != null) {
-      await disconnect(address: address);
+    if (controller.selectedAddress != null) {
+      await disconnect();
       await Future.delayed(Durations.medium1);
     }
-    if (selectedAddress == address) {
-      await disconnect(address: address);
-      selectedAddress = null;
+    if (controller.selectedAddress == address) {
+      await disconnect();
+      controller.selectedAddress = null;
       return;
     }
-    selectedAddress = address;
+    controller.selectedAddress = address;
     channel.invokeMethod("connectToGenericPrinter", {"Address": address});
   }
 
@@ -142,9 +143,8 @@ class ZebraPrinter {
     channel.invokeMethod("print", {"Data": data});
   }
 
-  Future<void> disconnect({required String address}) async {
+  Future<void> disconnect() async {
     await channel.invokeMethod("disconnect", null);
-    notifier.disconnectPrinter(address);
   }
 
   void calibratePrinter() {
@@ -164,30 +164,34 @@ class ZebraPrinter {
       final newPrinter = ZebraDevice(
         address: methodCall.arguments["Address"],
         name: methodCall.arguments["Name"],
-        connected: false,
         isWifi: methodCall.arguments["IsWifi"] == "true",
       );
-      notifier.addPrinter(newPrinter);
+      controller.addPrinter(newPrinter);
     } else if (methodCall.method == "printerRemoved") {
       final String address = methodCall.arguments["Address"];
-      notifier.removePrinter(address);
+      controller.removePrinter(address);
     } else if (methodCall.method == "changePrinterStatus") {
       final String status = methodCall.arguments["Status"];
       final String color = methodCall.arguments["Color"];
-      notifier.updatePrinterStatus(status, color, selectedAddress);
+      controller.updatePrinterStatus(status, color);
     } else if (methodCall.method == "onDiscoveryError" &&
         onDiscoveryError != null) {
       onDiscoveryError!(
           methodCall.arguments["ErrorCode"], methodCall.arguments["ErrorText"]);
+    } else if (methodCall.method == "onDiscoveryDone") {
+      if (shouldSync) {
+        controller.synchronizePrinter();
+        shouldSync = false;
+      }
     }
   }
-
-  String? id;
 }
 
-class ZebraPrinterNotifier extends ChangeNotifier {
+/// Notifier for printers, contains list of printers and methods to add, remove and update printers
+class ZebraController extends ChangeNotifier {
   List<ZebraDevice> _printers = [];
   List<ZebraDevice> get printers => List.unmodifiable(_printers);
+  String? selectedAddress;
 
   void addPrinter(ZebraDevice printer) {
     if (_printers.contains(printer)) return;
@@ -204,15 +208,7 @@ class ZebraPrinterNotifier extends ChangeNotifier {
     _printers.clear();
   }
 
-  void disconnectPrinter(String address) {
-    final int index =
-        _printers.indexWhere((element) => element.address == address);
-    _printers[index] = _printers[index].copyWith(connected: false);
-    notifyListeners();
-  }
-
-  void updatePrinterStatus(
-      String status, String color, String? selectedAddress) {
+  void updatePrinterStatus(String status, String color) {
     if (selectedAddress != null) {
       Color newColor = Colors.grey.withOpacity(0.6);
       switch (color) {
@@ -228,9 +224,27 @@ class ZebraPrinterNotifier extends ChangeNotifier {
       }
       final int index =
           _printers.indexWhere((element) => element.address == selectedAddress);
-      _printers[index] =
-          _printers[index].copyWith(status: status, color: newColor);
+      _printers[index] = _printers[index].copyWith(
+          status: status,
+          color: newColor,
+          isConnected: status == StatusZebra.Connected.name);
       notifyListeners();
     }
+  }
+
+  void synchronizePrinter() {
+    if (selectedAddress == null) return;
+    final int index =
+        _printers.indexWhere((element) => element.address == selectedAddress);
+    if (index == -1) {
+      selectedAddress = null;
+      return;
+    }
+    if (_printers[index].isConnected) return;
+    _printers[index] = _printers[index].copyWith(
+        status: StatusZebra.Connected.name,
+        color: Colors.green,
+        isConnected: true);
+    notifyListeners();
   }
 }
