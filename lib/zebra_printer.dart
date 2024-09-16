@@ -6,8 +6,6 @@ enum EnumMediaType { Label, BlackMark, Journal }
 
 enum Command { calibrate, mediaType, darkness }
 
-enum StatusZebra { Connected, Disconnected, Disconnecting, Connecting }
-
 class ZebraPrinter {
   late MethodChannel channel;
 
@@ -102,10 +100,6 @@ class ZebraPrinter {
     _setSettings(Command.mediaType, mediaType);
   }
 
-  void setLanguage({required String language}) {
-    channel.invokeMethod("setLanguage", {"Language": language});
-  }
-
   Future<void> connectToPrinter(String address) async {
     if (controller.selectedAddress != null) {
       await disconnect();
@@ -159,10 +153,17 @@ class ZebraPrinter {
     this.isRotated = !this.isRotated;
   }
 
+  Future<String> _getLocateValue({required String key}) async {
+    final String? value = await channel
+        .invokeMethod<String?>("getLocateValue", {"ResourceKey": key});
+    return value ?? "";
+  }
+
   Future<void> nativeMethodCallHandler(MethodCall methodCall) async {
     if (methodCall.method == "printerFound") {
       final newPrinter = ZebraDevice(
         address: methodCall.arguments["Address"],
+        status: methodCall.arguments["Status"],
         name: methodCall.arguments["Name"],
         isWifi: methodCall.arguments["IsWifi"] == "true",
       );
@@ -180,8 +181,10 @@ class ZebraPrinter {
           methodCall.arguments["ErrorCode"], methodCall.arguments["ErrorText"]);
     } else if (methodCall.method == "onDiscoveryDone") {
       if (shouldSync) {
-        controller.synchronizePrinter();
-        shouldSync = false;
+        _getLocateValue(key: "connected").then((connectedString) {
+          controller.synchronizePrinter(connectedString);
+          shouldSync = false;
+        });
       }
     }
   }
@@ -227,12 +230,12 @@ class ZebraController extends ChangeNotifier {
       _printers[index] = _printers[index].copyWith(
           status: status,
           color: newColor,
-          isConnected: status == StatusZebra.Connected.name);
+          isConnected: printers[index].address == selectedAddress);
       notifyListeners();
     }
   }
 
-  void synchronizePrinter() {
+  void synchronizePrinter(String connectedString) {
     if (selectedAddress == null) return;
     final int index =
         _printers.indexWhere((element) => element.address == selectedAddress);
@@ -242,9 +245,7 @@ class ZebraController extends ChangeNotifier {
     }
     if (_printers[index].isConnected) return;
     _printers[index] = _printers[index].copyWith(
-        status: StatusZebra.Connected.name,
-        color: Colors.green,
-        isConnected: true);
+        status: connectedString, color: Colors.green, isConnected: true);
     notifyListeners();
   }
 }

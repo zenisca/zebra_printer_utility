@@ -81,12 +81,12 @@ It won't stop automatically, if you wish to stop the scan you must call:
   zebraPrinter.stopScanning();
 ```
 
-To listen for and display any devices (`ZebraDevice`), you can use the Zebra printer `notifier`
+To listen for and display any devices (`ZebraDevice`), you can use the Zebra printer `ZebraController`
 ```sh
 ListenableBuilder(
-    listenable: zebraPrinter.notifier,
+    listenable: zebraPrinter.controller,
     builder: (context, child) {
-      final printers = notifier.printers;
+      final printers = zebraPrinter.controller.printers;
       if (printers.isEmpty) {
         return _getNotAvailablePage();
       }

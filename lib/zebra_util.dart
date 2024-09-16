@@ -13,8 +13,8 @@ class ZebraUtil {
     ZebraPrinter printer = ZebraPrinter(
       id,
       controller: controller,
-        onDiscoveryError: onDiscoveryError,
-        onPermissionDenied: onPermissionDenied);
+      onDiscoveryError: onDiscoveryError,
+      onPermissionDenied: onPermissionDenied);
     return printer;
   }
 }

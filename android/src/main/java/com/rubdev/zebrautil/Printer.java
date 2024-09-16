@@ -1,5 +1,6 @@
 package com.rubdev.zebrautil;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
@@ -19,7 +20,6 @@ import android.util.Base64;
 
 import androidx.annotation.NonNull;
 
-import com.rubdev.zebrautil.helper.LocaleHelper;
 import com.zebra.sdk.comm.BluetoothConnection;
 import com.zebra.sdk.comm.Connection;
 import com.zebra.sdk.comm.ConnectionException;
@@ -28,7 +28,6 @@ import com.zebra.sdk.printer.ZebraPrinter;
 import com.zebra.sdk.printer.ZebraPrinterFactory;
 import com.zebra.sdk.printer.ZebraPrinterLanguageUnknownException;
 import com.zebra.sdk.printer.discovery.DiscoveredPrinter;
-import com.zebra.sdk.printer.discovery.DiscoveryHandler;
 import com.zebra.sdk.printer.discovery.NetworkDiscoverer;
 
 import java.util.ArrayList;
@@ -81,12 +80,7 @@ public class Printer implements MethodChannel.MethodCallHandler {
                 @Override
                 public void foundPrinter(final DiscoveredPrinter discoveredPrinter) {
                     discoveredPrinters.add(discoveredPrinter);
-                    ((Activity) context).runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            addNewDiscoverPrinter(discoveredPrinter, context, methodChannel);
-                        }
-                    });
+                    ((Activity) context).runOnUiThread(() -> addNewDiscoverPrinter(discoveredPrinter, context, methodChannel));
                 }
 
                 @Override
@@ -146,10 +140,8 @@ public class Printer implements MethodChannel.MethodCallHandler {
     }
 
     private static void onDiscoveryDone(Context context,final MethodChannel methodChannel){
-        ((Activity) context).runOnUiThread(() -> {
-            methodChannel.invokeMethod("onDiscoveryDone",
-                    context.getResources().getString(R.string.done));
-        });
+        ((Activity) context).runOnUiThread(() -> methodChannel.invokeMethod("onDiscoveryDone",
+                context.getResources().getString(R.string.done)));
     }
 
     private void checkPermission(Context context, final MethodChannel.Result result) {
@@ -202,7 +194,6 @@ public class Printer implements MethodChannel.MethodCallHandler {
 
 
     private static void addNewDiscoverPrinter(final DiscoveredPrinter discoveredPrinter, Context context, final MethodChannel methodChannel) {
-
         addPrinterToDiscoveryPrinterList(discoveredPrinter);
         ((Activity) context).runOnUiThread(() -> {
             for (DiscoveredPrinter dp :
@@ -214,6 +205,7 @@ public class Printer implements MethodChannel.MethodCallHandler {
             HashMap<String, Object> arguments = new HashMap<>();
 
             arguments.put("Address", discoveredPrinter.address);
+            arguments.put("Status", context.getString(R.string.disconnect));
             if (discoveredPrinter.getDiscoveryDataMap().get("SYSTEM_NAME") != null) {
                 arguments.put("Name", discoveredPrinter.getDiscoveryDataMap().get("SYSTEM_NAME"));
                 arguments.put("IsWifi", true);
@@ -302,6 +294,8 @@ public class Printer implements MethodChannel.MethodCallHandler {
                 DemoSleeper.sleep(500);
             }
             setStatus(context.getResources().getString(R.string.done), context.getString(R.string.connectedColor));
+            DemoSleeper.sleep(200);
+            setStatus(context.getResources().getString(R.string.connected), context.getString(R.string.connectedColor));
         } catch (ConnectionException e) {
             disconnect();
         }
@@ -595,22 +589,18 @@ public class Printer implements MethodChannel.MethodCallHandler {
         } else if (call.method.equals("connectToPrinter")) {
             new Thread(() -> {
                 connectToSelectPrinter(call.argument("Address").toString());
-                ((Activity) context).runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        result.success(true);
-                    }
-                });
+                ((Activity) context).runOnUiThread(() -> result.success(true));
             }).start();
 
-        } else if (call.method.equals(("connectToGenericPrinter"))) {
+        } else if (call.method.equals("connectToGenericPrinter")) {
             connectToGenericPrinter(call.argument("Address").toString());
-        } else if (call.method.equals(("stopScan"))) {
+        } else if (call.method.equals("stopScan")) {
             stopScan();
-        } else if(call.method.equals("setLanguage")){
-            String language = call.argument("Language");
-            LocaleHelper.setLocale(context.getResources(), language);
-        } else {
+        } else if (call.method.equals("getLocateValue")){
+            String resourceKey = call.argument("ResourceKey");
+            @SuppressLint("DiscouragedApi") int resId = context.getResources().getIdentifier(resourceKey, "string", context.getPackageName());
+            result.success(resId == 0 ? "" : context.getString(resId));
+        }else {
             result.notImplemented();
         }
     }

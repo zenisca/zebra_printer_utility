@@ -38,3 +38,7 @@ Added background listening for Bluetooth device connections and disconnections, 
 Refactored Bluetooth scanning logic to optimize memory usage and prevent potential memory leaks.
 Improved thread management to prevent excessive thread creation during Bluetooth operations.
 Applied coding best practices, including proper resource management and context handling, to improve maintainability and performance.
+
+## 1.4.41
+* Support Spanish language.
+* Synchronize printer once the scan has been restarted.

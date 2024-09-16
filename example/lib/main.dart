@@ -19,7 +19,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: FutureBuilder(
-        future: ZebraUtil.getPrinterInstance(controller: ZebraController()),
+        future: ZebraUtil.getPrinterInstance(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
             return const Center(
@@ -43,7 +43,7 @@ class PrinterTemplate extends StatefulWidget {
 
 class _PrinterTemplateState extends State<PrinterTemplate> {
   late ZebraPrinter zebraPrinter;
-  late ZebraController notifier;
+  late ZebraController controller;
   final String dataToPrint = """^XA
         ^FX Top section with logo, name and address.
         ^CF0,60
@@ -56,39 +56,12 @@ class _PrinterTemplateState extends State<PrinterTemplate> {
         ^FO220,155^FDShelbyville TN 38102^FS
         ^FO220,195^FDUnited States (USA)^FS
         ^FO50,250^GB700,3,3^FS
-
-        ^FX Second section with recipient address and permit information.
-        ^CFA,30
-        ^FO50,300^FDJohn Doe^FS
-        ^FO50,340^FD100 Main Street^FS
-        ^FO50,380^FDSpringfield TN 39021^FS
-        ^FO50,420^FDUnited States (USA)^FS
-        ^CFA,15
-        ^FO600,300^GB150,150,3^FS
-        ^FO638,340^FDPermit^FS
-        ^FO638,390^FD123456^FS
-        ^FO50,500^GB700,3,3^FS
-
-        ^FX Third section with bar code.
-        ^BY5,2,270
-        ^FO100,550^BC^FD12345678^FS
-
-        ^FX Fourth section (the two boxes on the bottom).
-        ^FO50,900^GB700,250,3^FS
-        ^FO400,900^GB3,250,3^FS
-        ^CF0,40
-        ^FO100,960^FDCtr. X34B-1^FS
-        ^FO100,1010^FDREF1 F00B47^FS
-        ^FO100,1060^FDREF2 BL4H8^FS
-        ^CF0,190
-        ^FO470,955^FDCA^FS
-
         ^XZ""";
 
   @override
   void initState() {
     zebraPrinter = widget.printer;
-    notifier = zebraPrinter.controller;
+    controller = zebraPrinter.controller;
     zebraPrinter.startScanning();
     super.initState();
   }
@@ -97,7 +70,16 @@ class _PrinterTemplateState extends State<PrinterTemplate> {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          title: _GetAppCustom(zebraPrinter.isScanning),
+          title: Column(
+            children: [
+              const Text("My Printers"),
+              if (zebraPrinter.isScanning)
+                const Text(
+                  "Seaching for printers...",
+                  style: TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+            ],
+          ),
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: () {
@@ -112,9 +94,9 @@ class _PrinterTemplateState extends State<PrinterTemplate> {
               zebraPrinter.isScanning ? Icons.stop_circle : Icons.play_circle),
         ),
         body: ListenableBuilder(
-          listenable: zebraPrinter.controller,
+          listenable: controller,
           builder: (context, child) {
-            final printers = notifier.printers;
+            final printers = controller.printers;
             if (printers.isEmpty) {
               return _getNotAvailablePage();
             }
@@ -127,17 +109,20 @@ class _PrinterTemplateState extends State<PrinterTemplate> {
     return ListView.builder(
         itemBuilder: (BuildContext context, int index) {
           return ListTile(
-            title: InkWell(
-                onTap: () {
-                  zebraPrinter.connectToPrinter(printers[index].address);
-                },
-                child: Text(printers[index].name)),
+            title: Text(printers[index].name),
             subtitle: Text(printers[index].status,
                 style: TextStyle(color: printers[index].color)),
             leading: IconButton(
               icon: Icon(Icons.print, color: printers[index].color),
               onPressed: () {
                 zebraPrinter.print(data: dataToPrint);
+              },
+            ),
+            trailing: IconButton(
+              icon: Icon(Icons.bluetooth_connected_rounded,
+                  color: printers[index].color),
+              onPressed: () {
+                zebraPrinter.connectToPrinter(printers[index].address);
               },
             ),
           );
@@ -156,25 +141,6 @@ class _PrinterTemplateState extends State<PrinterTemplate> {
           Text("Printers not found"),
         ],
       ),
-    );
-  }
-}
-
-class _GetAppCustom extends StatelessWidget {
-  const _GetAppCustom(this.isScanning);
-  final bool isScanning;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const Text("My Printers"),
-        if (isScanning)
-          const Text(
-            "Seaching for printers...",
-            style: TextStyle(color: Colors.grey, fontSize: 12),
-          ),
-      ],
     );
   }
 }

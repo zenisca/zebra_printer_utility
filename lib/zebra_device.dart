@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:flutter/services.dart';
-import 'package:zebrautil/zebra_printer.dart';
 
 List<ZebraDevice> zebraDevicesModelFromJson(String str) =>
     List<ZebraDevice>.from(
@@ -25,20 +24,20 @@ class ZebraDevice {
       {required this.address,
       required this.name,
       required this.isWifi,
+      required this.status,
       this.isConnected = false,
       this.color = const Color.fromARGB(255, 255, 0, 0),
-      String? status})
-      : status = status ?? StatusZebra.Disconnected.name;
-
+      });
+      
   factory ZebraDevice.empty() =>
-      ZebraDevice(address: "", name: "", isWifi: false);
+      ZebraDevice(address: "", name: "", isWifi: false, status: '');
 
   factory ZebraDevice.fromJson(Map<String, dynamic> json) => ZebraDevice(
       address: json["ipAddress"] ?? json["macAddress"],
       name: json["name"],
       isWifi: json["isWifi"].toString() == "true",
       isConnected: json["isConnected"],
-      status: json["status"] ?? StatusZebra.Disconnected.name,
+      status: json["status"] ,
       color: json["color"]);
 
   Map<String, dynamic> toJson() => {
