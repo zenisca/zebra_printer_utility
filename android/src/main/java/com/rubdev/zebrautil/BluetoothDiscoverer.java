@@ -17,6 +17,7 @@ import com.zebra.sdk.printer.discovery.DiscoveredPrinterBluetooth;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
 public class BluetoothDiscoverer {
     private final Context mContext;
@@ -79,7 +80,6 @@ public class BluetoothDiscoverer {
         IntentFilter var1 = new IntentFilter(BluetoothDevice.ACTION_FOUND);
         IntentFilter var2 = new IntentFilter(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
         IntentFilter var3 = new IntentFilter(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED);
-
         this.mContext.registerReceiver(this.btReceiver, var1);
         this.mContext.registerReceiver(this.btReceiver, var2);
         this.mContext.registerReceiver(this.btMonitor, var3);
@@ -110,7 +110,7 @@ public class BluetoothDiscoverer {
     private class BtReceiver extends BroadcastReceiver {
         private static final int BLUETOOTH_PRINTER_CLASS = 1664;
         private static final long DISCOVERY_INTERVAL = 10000;
-        private static final long DEVICE_TIMEOUT = 25000;
+        private static final long DEVICE_TIMEOUT = 28000;
         private final Map<BluetoothDevice,Long> foundDevices;
 
         private BtReceiver() {
@@ -147,14 +147,17 @@ public class BluetoothDiscoverer {
         }
 
         private void processFoundPrinter(Intent var1) {
-            BluetoothDevice var2 = (BluetoothDevice)var1.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-            if(var2 == null){
+            BluetoothDevice device = (BluetoothDevice)var1.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+            if(device == null){
                 return;
             }
-            if (this.isPrinterClass(var2) && BluetoothDiscoverer.this.deviceFilter != null && BluetoothDiscoverer.this.deviceFilter.shouldAddPrinter(var2)) {
-                BluetoothDiscoverer.this.mDiscoveryHandler.foundPrinter(new DiscoveredPrinterBluetooth(var2.getAddress(), var2.getName()));
+            if (this.isPrinterClass(device) && BluetoothDiscoverer.this.deviceFilter != null && BluetoothDiscoverer.this.deviceFilter.shouldAddPrinter(device)) {
+
+                if(!this.foundDevices.containsKey(device)){
+                    BluetoothDiscoverer.this.mDiscoveryHandler.foundPrinter(new DiscoveredPrinterBluetooth(device.getAddress(), device.getName()));
+                }
                 Long foundAt = System.currentTimeMillis();
-                this.foundDevices.put(var2, foundAt);
+                this.foundDevices.put(device, foundAt);
             }
 
         }

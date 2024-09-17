@@ -128,7 +128,7 @@ class ZebraPrinter {
     channel.invokeMethod("connectToGenericPrinter", {"Address": address});
   }
 
-  void print({required String data}) {
+  void printNow({required String data}) {
     if (!data.contains("^PON")) data = data.replaceAll("^XA", "^XA^PON");
 
     if (isRotated) {

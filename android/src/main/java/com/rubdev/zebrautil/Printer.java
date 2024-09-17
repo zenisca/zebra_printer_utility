@@ -63,7 +63,7 @@ public class Printer implements MethodChannel.MethodCallHandler {
     public Printer(ActivityPluginBinding binding, BinaryMessenger binaryMessenger) {
         this.context = binding.getActivity();
         this.binding = binding;
-        this.methodChannel = new MethodChannel(binaryMessenger, "ZebraPrinterObject" + this.toString());
+        this.methodChannel = new MethodChannel(binaryMessenger, "ZebraPrinterObject" + this);
         methodChannel.setMethodCallHandler(this);
     }
 
@@ -382,11 +382,7 @@ public class Printer implements MethodChannel.MethodCallHandler {
     }
 
     public void stopScan(){
-        try{
-            BluetoothDiscoverer.stopBluetoothDiscovery();
-        }catch(Exception e){
-            setStatus(context.getString(R.string.stopping_scan), context.getString(R.string.connectedColor));
-        }
+        BluetoothDiscoverer.stopBluetoothDiscovery();
     }
 
 
