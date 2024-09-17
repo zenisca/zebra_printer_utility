@@ -128,7 +128,7 @@ class ZebraPrinter {
     channel.invokeMethod("connectToGenericPrinter", {"Address": address});
   }
 
-  void printNow({required String data}) {
+  void print({required String data}) {
     if (!data.contains("^PON")) data = data.replaceAll("^XA", "^XA^PON");
 
     if (isRotated) {
@@ -208,7 +208,8 @@ class ZebraController extends ChangeNotifier {
   }
 
   void cleanAll() {
-    _printers.clear();
+    if(_printers.isEmpty) return;
+    _printers.removeWhere((element) => !element.isConnected);
   }
 
   void updatePrinterStatus(String status, String color) {

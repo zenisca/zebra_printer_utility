@@ -97,7 +97,6 @@ class _PrinterTemplateState extends State<PrinterTemplate> {
           listenable: controller,
           builder: (context, child) {
             final printers = controller.printers;
-            print("Get printers: ${printers.length}");
             if (printers.isEmpty) {
               return _getNotAvailablePage();
             }
@@ -116,7 +115,7 @@ class _PrinterTemplateState extends State<PrinterTemplate> {
             leading: IconButton(
               icon: Icon(Icons.print, color: printers[index].color),
               onPressed: () {
-                zebraPrinter.printNow(data: dataToPrint);
+                zebraPrinter.print(data: dataToPrint);
               },
             ),
             trailing: IconButton(

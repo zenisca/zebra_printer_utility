@@ -125,6 +125,9 @@ For disconnect from printer, use `disconnect` method. For battery saver, disconn
   zebraPrinter.disconnect();
 ```
 
+# P.S
+You need to be aware that once you are connected to a printer, it may not be detected by the scan. I recommend stopping the scan after successfully connecting to a printer until the issue is resolved.
+
 # Acknowledgements
 I would like to express my gratitude to Deltec for fostering a friendly and supportive environment.
 

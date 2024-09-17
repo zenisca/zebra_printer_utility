@@ -42,3 +42,7 @@ Applied coding best practices, including proper resource management and context 
 ## 1.4.41
 * Support Spanish language.
 * Synchronize printer once the scan has been restarted.
+
+## 1.4.42
+* Fix error in Printer class, devices were duplicated.
+* Persist printer connected.
